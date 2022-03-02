@@ -1,0 +1,402 @@
+---
+title: "Stat333 Project1"
+author: "Kelsey Gelden, Brian Johnson, Meishu Zhao, Junyuan Xiang"
+date: "10/4/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+We will be attaching our data table "BodyFat" to our code, to analyze and
+manipulate it in order to find our best predictors for body fat percentage.
+Our goal is to find a simple and robust way to predict our body fat percentage.
+
+```{r}
+#BodyFat = read.csv("BodyFat.csv")
+#attach(BodyFat)
+#summary(BodyFat)
+library(readr)
+BodyFat <- read_csv("/Users/19kelsog7/Desktop/Fall 2021/STAT333/Stat333_Project1_files/BodyFat.csv")
+attach(BodyFat)
+summary(BodyFat)
+#library(readr)
+#BodyFat <- read_csv("Desktop/Fall 2021/STAT333/Stat333_Project1_files/BodyFat.csv")
+#View(BodyFat)
+
+```
+
+We noticed, after analyzing our raw data, that some categories are measured in 
+different units. We also noticed that one person (#39) takes up the
+maximum values for quite a few measurements. We also saw that #42 is said to be
+very short (29.5 inches), which seems to be quite inaccurate, especially for 
+weighing 205 pounds. We also saw the difference in rounding for each variable.
+For example, centimeter measurements are rounded to the nearest tenth, but 
+weight and height are rounded to the nearest quarter, and age is rounded to the 
+nearest year. These are all things to keep in mind when looking for accuracy. 
+
+```{r}
+BodyFat[c(36,39,42,172,182,192,216),]
+```
+
+This specific data table of values contain the outliers that we first noticed when
+analyzing the original data table. We noticed that our weight distribution, 
+along with many circumference measurements will be very skewed to the right due to #39.
+There may have also been errors in recording the initial data. Errors could include
+simple mistakes and/or inaccurate recordings in density to measure body fat, as it is 
+impossible to have negative or 0% body fat. 
+We used an estimator to determine how density recorded body fat percentage, and 
+the minimum body fat percentage is listed as 0.0%, but the density approximator 
+calculated it as -3.6117% body fat. Our maximum body fat percentage could also 
+be a result of a miscalculation, as the density approximator determined the body 
+fat percentage to be at 47.4874% while the max body fat in the data set is 45.1%, which
+is unlikely, but not impossible. We also saw that the height of data point 42 is
+extremely low and does not match up with his recorded BMI measurement. We will further
+investigate this mis-measurement. 
+Our body fat percentage approximator by density is as follows: (495/density)-450 = bf%
+
+
+```{r}
+par(mfrow=c(3,2))
+par(mgp=c(1.8,.5,0), mar=c(3,3,1,1))
+
+hist(BODYFAT,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Body Fat %",xlab="Body Fat %")
+hist(WEIGHT,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Weight",xlab="Weight (lbs)")
+hist(HEIGHT,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Height",xlab="Height (in)")
+hist(ABDOMEN,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Abdomen Circumference",xlab="Abdomen Circumference (cm)")
+hist(NECK,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Neck Circumference",xlab="Neck Circumference (cm)")
+hist(AGE,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Age",xlab="Age (yrs)")
+hist(CHEST,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Chest Circumference",xlab="Chest Circumference (cm)")
+hist(THIGH,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Thigh Circumference",xlab="Thigh Circumference (cm)")
+hist(WRIST,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Wrist Circumference",xlab="Wrist Circumference (cm)")
+hist(HIP,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Hip Circumference",xlab="Hip Circumference (cm)")
+hist(ANKLE,breaks=100,cex.lab=1.5,cex.main=1.5,
+     main="Histogram of Ankle Circumference",xlab="Ankle Circumference (cm)")
+```
+
+These histograms explain the distributions of each variable. Body fat percentage 
+seems to have a normal distribution, weight is slightly skewed to the right, etc. 
+As we can see in these distributions, there are clear outliers in the data set, 
+but we are not sure if they are influential points or not. We can study qqplots, 
+residual plots, and linear regression models to understand these points' effects 
+on this study. Depending on the effect that these points have on our model, we 
+will remove the points that seem to have been an inaccurate measurement that 
+hinders our prediction model. Also, we realized that male #39 holds the maximum 
+value for all measurements except for body fat percentage, height, age, ankle, 
+forearm, and density (given that bf% is derived from the density measurement). We 
+believe that this is partial proof that there has been a mishap in the data set, 
+because #39's measurements are so large, but his body fat percentage is 
+significantly less than our maximum of 45.10%, and his weight is 144.15 pounds 
+heavier than the person with 45.10% body fat. This data seems to contain 
+mis-recordings, but we can check how linear of a relationship there is between 
+weight and body fat percentage by plotting a scatter plot. Height also seems to 
+be normally distributed except for #42's height of 29.50 inches. For the most part,
+circumference measurements seem to be normally distributed, however age is not 
+at all. The histogram of the distribution of age shows that there are roughly the 
+same amount of people in each age group, but the mid-40's are the most common. 
+Let's take a look at some outlier data that we saw from the histograms above.
+
+```{r}
+BodyFat[WEIGHT > 300,]
+BodyFat[HEIGHT < 60,]
+BodyFat[BODYFAT < 4 | BODYFAT > 40,]
+BodyFat[ABDOMEN > 130,]
+BodyFat[NECK > 45,]
+BodyFat[CHEST > 125,]
+BodyFat[THIGH > 75,]
+BodyFat[HIP > 120,]
+BodyFat[ANKLE > 30,]
+```
+As we analyze these possible outliers, we noticed that, again, #39 is an outlier 
+in nearly every measurement. Also, we decided to do our own calculation on #42's 
+BMI to test whether his height measurement is accurate or not. According to our 
+BMI calculation: [(weight/(height^2))*703 = BMI], with his height and weight, 
+his BMI would come to 165.602. This would mean that this person would not be 
+living, so we took into account that this height measurement is a mistake, 
+therefore we will be removing this row from the data set. We also calculated his 
+actual height based off of his BMI and it came out to be about 69.5 inches.
+We also decided that a person with 0% body fat would simply not survive, so this 
+also must be a miscalculation, and we will be removing data #182. Although 45.1% 
+body fat is extreme, we will be keeping this data point as it is still possible 
+to live in this condition. In conclusion of these histograms, we will be 
+removing data point 182 and 42, and we will take a closer look at data point 39.
+
+
+```{r}
+par(mfrow=c(2,2))
+par(mgp=c(1.8,.5,0), mar=c(3,3,1,1))
+
+plot(HEIGHT, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+     xlab = "Height (in)", ylab = "Body Fat %", main = "Body Fat % vs Height")
+
+plot(ANKLE, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Ankle (cm)", ylab = "Body Fat %", main = "Body Fat % vs Ankle Circumference")
+
+plot(AGE, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+     xlab = "Age (yrs)", ylab = "Body Fat %", main = "Body Fat % vs Age")
+
+plot(FOREARM, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Forearm (cm)", ylab = "Body Fat %", main = "Body Fat % vs Forearm Circumference")
+
+plot(WRIST, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Wrist (cm)", ylab = "Body Fat %", main = "Body Fat % vs Wrist Circumference")
+
+plot(BICEPS, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Bicep (cm)", ylab = "Body Fat %", main = "Body Fat % vs Bicep Circumference")
+
+plot(NECK, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+     xlab = "Neck (cm)", ylab = "Body Fat %", main = "Body Fat % vs Neck Circumference")
+
+plot(KNEE, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Knee (cm)", ylab = "Body Fat %", main = "Body Fat % vs Knee Circumference")
+
+plot(THIGH, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Thigh (cm)", ylab = "Body Fat %", main = "Body Fat % vs Thigh Circumference")
+
+plot(WEIGHT, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+     xlab = "Weight (lbs)", ylab = "Body Fat %", main = "Body Fat % vs Weight")
+
+plot(HIP, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Hip (cm)", ylab = "Body Fat %", main = "Body Fat % vs Hip Circumference")
+
+plot(CHEST, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Chest (cm)", ylab = "Body Fat %", main = "Body Fat % vs Chest Circumference")
+
+plot(ABDOMEN, BODYFAT, pch = 19, cex = 0.6, cex.lab = 1.5, cex.main = 1.5,
+       xlab = "Abdomen (cm)", ylab = "Body Fat %", main = "Body Fat % vs Abdomen Circumference")
+```
+
+While analyzing each of these variables in respect to body fat percentage, we 
+noticed that abdomen measurements were most linearly related to body fat 
+percentage. We also noticed that height, age, ankle circumference, forearm 
+circumference, wrist circumference, and neck circumference were not good 
+predictors for body fat percentage, as their relationship between themselves and 
+body fat percentage are not significantly linear. We also noticed that biceps 
+would not be a reliable predictor of body fat percentage due to its violation of
+homoskedasticity. Knee circumference and thigh circumference both start to show 
+some linear relationship between themselves and body fat percentage, however we 
+will need a more significant relationship between the two to be able to accurately 
+predict body fat percentage. Our most significant linear relationships with body 
+fat percentage seems to be with chest and abdomen variables according to these 
+scatter plots. Therefore, we will further analyze these variables to test for 
+body fat percentage. We also concluded that data point 39 is such an extreme 
+value, that our prediction model would not be able to properly predict a body 
+fat percentage for such an outlier. 
+Therefore, we will remove data points 39, 42, and 182.
+
+```{r}
+boxplot(ABDOMEN)
+```
+
+This box plot of abdomen distribution displays the outlier caused by #39. This is
+further proof as to why we believe that we should remove this data point.
+
+```{r}
+BodyFat <- BodyFat[-c(42, 182, 39),]
+summary(BodyFat)
+boxplot(BodyFat$ABDOMEN)
+```
+
+
+This is where we decided to remove our data points that are hindering our
+prediction model. We removed data points 39, 42, and 182. Our new summary is 
+listed above, along with a box plot of abdomen circumference distribution
+without #39 in the data. Outliers still exist in the abdomen distribution, but 
+these points (41 and 216) show no inaccurate measurements or hindered recordings, 
+therefore we will keep them.
+
+```{r}
+## Are there any significant predictors in our set of variables?
+BodyFat.lm=lm(BodyFat$BODYFAT~BodyFat$WEIGHT+BodyFat$HEIGHT+BodyFat$HIP+BodyFat$ABDOMEN+BodyFat$AGE+BodyFat$CHEST+BodyFat$NECK+BodyFat$ANKLE+BodyFat$THIGH+BodyFat$BICEPS+BodyFat$WRIST+BodyFat$KNEE+BodyFat$FOREARM+BodyFat$ADIPOSITY,data=BodyFat)
+summary(BodyFat.lm)
+```
+
+```{r}
+chestFit <- lm(BodyFat$BODYFAT ~ BodyFat$CHEST, data = BodyFat)
+summary(chestFit)
+```
+
+When looking at the chest and body fat percentage summary, we see that there is 
+a good amount of significance here. Chest circumference explains about 48% of
+variance in body fat percentage. 
+
+```{r}
+abdomenFit <- lm(BodyFat$BODYFAT ~ BodyFat$ABDOMEN, data = BodyFat)
+summary(abdomenFit)
+```
+
+After analyzing this summary, we can clearly see that abdomen circumference is a
+good predictor for body fat percentage, as it has a very high F-Statistic, meaning
+that it is very significant. Abdomen circumference explains about 67% of variance
+in body fat percentage.
+
+```{r}
+abdomenChestFit <- lm(BodyFat$BODYFAT ~ BodyFat$ABDOMEN + BodyFat$CHEST, data = BodyFat)
+summary(abdomenChestFit)
+```
+
+```{r}
+reducedModel=lm(BodyFat$BODYFAT~BodyFat$CHEST + BodyFat$ABDOMEN,data=BodyFat)
+fullModel= lm(BodyFat$BODYFAT ~ ., data = BodyFat)
+anova(reducedModel,fullModel)
+
+reducedModel=lm(BodyFat$BODYFAT~BodyFat$ABDOMEN,data=BodyFat)
+fullModel= lm(BodyFat$BODYFAT ~ ., data = BodyFat)
+anova(reducedModel,fullModel)
+```
+This summary explains that chest and abdomen circumference together are significant
+predictors for body fat percentage, however the significance is not as high
+as the simple predictor of just abdomen measurements, as seen in the smaller F
+statistic. The variance of body fat explained by just abdomen circumference alone is 
+slightly larger than the variance of body fat percentage explained by chest and 
+abdomen circumference together. Our ANOVA tests explain that chest and abdomen together
+are significant predictors after accounting for all other variables, but out simple regression model with just abdomen circumference explains the variance very well, and
+it is easier to just use one measurement.
+
+In conclusion, we will only use abdomen circumference to predict body fat percentage
+in a simple and robust way.
+
+
+```{r}
+##Linearity: Scatter Plot
+plot(BodyFat$ABDOMEN,BodyFat$BODYFAT,pch=19,cex=1.2,cex.lab=1.5,cex.main=1.5,
+     xlab="Abdomen (cm)",ylab="Body Fat %",main="Body Fat % and Abdomen Circumference")
+lmmodel = lm(BODYFAT ~ ABDOMEN, data = BodyFat)
+abline(lmmodel,col="blue",lwd=5)
+legend("bottomright",c("SLR Line: slope=0.616,intercept=-37.991"),col="blue",lwd=3,lty=c(1))
+```
+
+As we take a closer look at this scatter plot of our chosen variable
+for linearity, we can say that for every cm increase in abdomen circumference, 
+a male would expect to see about a 0.616% increase in body fat. 
+
+
+```{r}
+##Normality: QQ-Plot
+qqnorm(rstandard(abdomenFit),pch=19,cex=0.8,cex.lab=1.5,cex.main=1.5,
+      main="Normal Q-Q Plot of the Residuals")
+abline(a=0,b=1,col="blue",lwd=3)
+```
+
+After analyzing our qqplot of abdomen circumference vs body fat percentage,
+we can conclude that our abdomen predictor passes the normality assumption. This
+is because we see no abnormalities in our plot.
+
+```{r}
+##Influential Observations: Cook's Distance
+
+pii = hatvalues(abdomenFit)
+cooki = cooks.distance(abdomenFit)
+
+par(mfrow = c(2,1))
+n = dim(BodyFat)[1]
+plot(1:n,pii,type="p",pch=19,cex=0.6,cex.lab=1.5,cex.main=1.5,
+     xlab="Index (Each Observation)",ylab="Pii",main="Leverage Values (Pii)")
+plot(1:n,cooki,type="p",pch=19,cex=0.6,cex.lab=1.5,cex.main=1.5,
+     xlab="Index (Each Observation)",ylab="Cook's Distance",main="Influence Values (Cook's Distance)")
+```
+
+In this diagnostic plot, we can see that data point 216 with bf 45.1% is not 
+much of an outlier, because all of his measurements line up with the expected.
+Data point 216 is not an influential point. This point's cook's distance is
+not significant, therefore we can conclude that it is not an influential
+outlier.
+
+
+```{r}
+##Constant error variance, error mean is 0, random error: Residual Plot
+res <- resid(abdomenFit)
+plot(fitted(abdomenFit), res,pch=19,cex=1,cex.lab=1.5,cex.main=1.5,
+    xlab="Predicted Body Fat %", ylab="Standardized Residuals",main="Standardized Residual Plot")
+abline(a=0,b=0,col="black",lwd=3)
+```
+
+This residual plot displays that the residuals seem scattered evenly and nicely 
+around 0 with no significant patterns, after taking out the inaccurate measurements and
+influential outliers. Error looks to be randomized around the mean. This allows 
+us to pass the assumption of homoscedasticity. 
+
+
+```{r}
+abdomenFit <- lm(BodyFat$BODYFAT ~ BodyFat$ABDOMEN, data = BodyFat)
+summary(abdomenFit)
+```
+
+With bringing back these statistics, we can build a simple equation to calculate 
+our bf%. Our equation is as follows:
+0.616(abdomen circumference in cm) - 37.991 = body fat percentage
+
+
+We can use this in our prediction with an example of 90cm abdomen circumference.
+We will obtain our y-value of body fat percentage, and a 95% confidence interval.
+
+```{r}
+predict(lmmodel,newdata = data.frame(ABDOMEN=90),interval="predict")
+```
+
+This prediction states that if a male has a 90cm abdomen circumference, the 
+predicted value of body fat percentage would be 17.44%, and there is a 95% probability
+that his body fat percentage would be between about 8.83% and 26.04%. Also, 
+according to our prediction model, for every cm increase in abdomen 
+circumference, it's expected to increase a male's body fat percentage by 0.616%.
+
+```{r}
+predict(lmmodel,newdata=data.frame(ABDOMEN=90),interval="confidence",level=0.95)
+```
+
+This confidence interval states that if a male has a 90cm abdomen circumference,
+we are 95% confident that average body fat percentages of men who are like him 
+are between about 16.880% and 17.998%.
+
+# Summary
+
+Our calculated SLR model to predict Body Fat % comes out to be:
+
+$BodyFatPercentage = -37.991 + (0.616 * Abdomen Circumference(cm))$
+
+**Analysis:** For every 1 centimeter gained in abdomen circumference, a male is expected
+to increase in body fat percentage by about 0.616%.
+
+**Example:** For a male within the age range of mid 20's to mid 70's with an abdomen
+circumference of 90cm, we predict his body fat percentage to be 17.439%. Along with that,
+there would be a 95% probability that this male's body fat percentage falls with in a
+range of (8.833, 26.044).
+
+**Relationship:** We find a clear linear relationship between Abdomen circumference and
+body fat in males with a significance level of $\alpha = .05$. We attain a p-value of
+$2.2e-16$.
+This SLR model also explains about 67% of the variations in body fat percentage in males.
+
+**Assumptions:**
+
+1. Linearity: Not violated through scatter plots, random scattering and follows 
+the line fairly well.
+
+2. Homoscedasticity: Not violated through residual plots, no fanning or skewness found.
+
+3. Normality: Not violated through QQ plots, hugs 45 degree line, little to no 
+skewness of plots.
+
+4. Explains 67% of variability for young adult to adult males, a fairly 
+encompassing SLR model.
+
+5. A very low p-value of $2.2e-16$ allows us to draw the conclusion that abdomen 
+circumference is useful in predicting Body Fat Percentage.
+
+**Conclusion:** This prediction model shows that with this simple equation, we can
+predict body fat percentage of adult males through a single measurement of abdomen
+circumference(cm) in a fairly accurate manner. With no assumptions being violated and the
+outliers being accounted for, our equation and confidence/prediction intervals for slope
+and intercept can give proper estimates, predictions, and ranges from a single abdomen
+measurement of circumference.
