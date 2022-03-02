@@ -14,17 +14,10 @@ manipulate it in order to find our best predictors for body fat percentage.
 Our goal is to find a simple and robust way to predict our body fat percentage.
 
 ```{r}
-#BodyFat = read.csv("BodyFat.csv")
-#attach(BodyFat)
-#summary(BodyFat)
 library(readr)
 BodyFat <- read_csv("/Users/19kelsog7/Desktop/Fall 2021/STAT333/Stat333_Project1_files/BodyFat.csv")
 attach(BodyFat)
 summary(BodyFat)
-#library(readr)
-#BodyFat <- read_csv("Desktop/Fall 2021/STAT333/Stat333_Project1_files/BodyFat.csv")
-#View(BodyFat)
-
 ```
 
 We noticed, after analyzing our raw data, that some categories are measured in 
